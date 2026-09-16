@@ -17,12 +17,6 @@ Pooling is a **component you attach, not a class you inherit from**: any script 
 spawn/despawn callback just implements the plain `IPoolable` interface directly, so it never competes
 with another base class.
 
-## Screenshots
-
-| Pool Data editor | `Poolable` component |
-| --- | --- |
-| ![Pool Data editor showing a card grid of pooled prefabs](ScreenShots/Inspector.png) | ![Poolable component inspector](ScreenShots/Component.png) |
-
 ## Features
 
 - Pure C# pooling engine (`GenericPool<T>`) - allocation-free steady-state `Get()`/`Release()`, fully
@@ -52,25 +46,16 @@ definitions - no other setup is required.
 
 ## Quick Start
 
-**1. Make a script poolable** by implementing `IPoolable` directly (no base class needed):
-
-```csharp
-using UnityEngine;
-using PoolSystem;
-
-public class Enemy : MonoBehaviour, IPoolable
-{
-    public void OnSpawned()  { /* reset state */ }
-    public void OnDespawned() { /* unsubscribe from events, stop coroutines */ }
-}
-```
-
-**2. Create a Pool Data asset** via `Create > Pool System > Pool Data`, add a group, and drag your
+**1. Create a Pool Data asset** via `Create > Pool System > Pool Data`, add a group, and drag your
 prefab into it with a name (e.g. `Enemy`) and an initial spawn count.
 
-**3. Click Compile.** Unity recompiles and assigns each prefab's `Poolable` component automatically.
+![Pool Data editor showing a card grid of pooled prefabs](ScreenShots/Inspector.png)
 
-**4. Initialize once, then spawn/release from anywhere:**
+**2. Click Compile.** Unity recompiles and assigns each prefab's `Poolable` component automatically.
+
+![Poolable component inspector](ScreenShots/Component.png)
+
+**3. Initialize once, then spawn/release from anywhere:**
 
 ```csharp
 using UnityEngine;
