@@ -2,7 +2,7 @@
 
 Generic object pooling system for Unity.
 
-![PoolSystem](ScreenShots/PoolSystem.jpg)
+![PoolSystem](ScreenShots/PoolSystem.png)
 
 ## Overview
 
