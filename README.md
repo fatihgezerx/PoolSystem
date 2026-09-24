@@ -23,10 +23,10 @@ with another base class.
   unit-testable outside Play Mode
 - `Poolable` component: discovers and forwards to any sibling `IPoolable` scripts automatically, and
   exposes `OnSpawnedEvent`/`OnDespawnedEvent` `UnityEvent`s for no-code wiring
-- Visual `PoolData` editor: named groups, a wrapping card grid per group with live prefab previews,
-  drag-and-drop reassignment, and an inline Initialize Count stepper
+- Visual `PoolData` editor: named groups you can reorder by dragging, a wrapping card grid per group
+  with live prefab previews, drag-and-drop reassignment, and an inline Initialize Count stepper
 - One-click **Compile**: generates a contiguous `PoolTypes` enum and assigns every prefab's `Poolable`
-  component in a domain-reload-safe, two-phase process
+  component in a domain-reload-safe, two-phase process, skipping prefabs that are already up to date
 - `PoolManager`: a minimal static API (`Initialize`, `Get`, `Release`) backed by a plain array indexed
   by `(int)PoolTypes` - no dictionary hashing, no boxing
 - Double-release and foreign-object guards that log a warning instead of corrupting pool state
@@ -49,9 +49,15 @@ definitions - no other setup is required.
 **1. Create a Pool Data asset** via `Create > Pool System > Pool Data`, add a group, and drag your
 prefab into it with a name (e.g. `Enemy`) and an initial spawn count.
 
+- **Group names** (e.g. `Enemies`, `Props`) only organize the Inspector and have no effect at runtime.
+  Reorder groups by dragging the handle on the left of a group's name.
+- **The name under each prefab** is what matters: Compile turns it into its `PoolTypes` member
+  (e.g. `PoolTypes.Enemy`), so every name must be unique.
+
 ![Pool Data editor showing a card grid of pooled prefabs](ScreenShots/Inspector.png)
 
 **2. Click Compile.** Unity recompiles and assigns each prefab's `Poolable` component automatically.
+Compiling again after adding or renaming entries only touches the prefabs that changed.
 
 ![Poolable component inspector](ScreenShots/Component.png)
 

@@ -74,6 +74,13 @@ namespace PoolSystem
                 return false;
             }
 
+            // Already compiled with this type: nothing to add or change, so don't re-save the prefab.
+            var asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (asset != null && asset.TryGetComponent<Poolable>(out var existing) && existing.poolType == parsedType)
+            {
+                return true;
+            }
+
             var root = PrefabUtility.LoadPrefabContents(path);
             try
             {

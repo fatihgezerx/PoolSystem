@@ -5,12 +5,12 @@ using UnityEngine;
 namespace PoolSystem
 {
     /// <summary>
-    /// Custom Inspector for <see cref="PoolData"/>: each <see cref="PoolGroup"/> is a box with an
-    /// editable header and its entries laid out in a horizontal, wrapping card grid - each card shows
-    /// a real 3D preview of its prefab, its name, and an initialize-count stepper - capped at roughly
-    /// two visible rows with a scroll + fade hint when a group holds more entries than that. A "+"
-    /// grows the current group; a "+" below every group adds a whole new one. "Compile" hands off to
-    /// <see cref="PoolCompiler"/>.
+    /// Custom Inspector for <see cref="PoolData"/>: inside a POOL SETTINGS box, each <see cref="PoolGroup"/>
+    /// is a box with a drag handle (to reorder groups), an editable header and its entries laid out in a
+    /// horizontal, wrapping card grid - each card shows a real 3D preview of its prefab, its name, and an
+    /// initialize-count stepper - capped at roughly two visible rows with a scroll + fade hint when a
+    /// group holds more entries than that. A "+" grows the current group; a "+" below every group adds a
+    /// whole new one. "Compile" hands off to <see cref="PoolCompiler"/>.
     /// </summary>
     [CustomEditor(typeof(PoolData))]
     internal sealed class PoolDataEditor : UnityEditor.Editor
@@ -24,6 +24,12 @@ namespace PoolSystem
         private const float DeleteButtonSize = 16f;
         private const float FadeHeight = 16f;
         private const float HeaderHeight = 28f;
+        private const float GroupHeaderHeight = 22f;
+
+        private const string GroupInfo =
+            "Group names only organize your prefabs in this Inspector (e.g. \"Enemies\", \"Props\") and have no " +
+            "effect at runtime. The name under each prefab is what matters: Compile turns it into its PoolTypes " +
+            "member (e.g. PoolTypes.Cube), so every name must be unique. Press Compile after any change.";
 
         private const float CardOuterWidth = CardSize + CardInnerPadding * 2f;
         private const float CardOuterHeight = CardSize + CardInnerPadding * 2f + FieldHeight * 2f + FieldSpacing * 2f;
@@ -31,8 +37,11 @@ namespace PoolSystem
         private const float RowHeight = CardOuterHeight + CardGap;
 
         private readonly Dictionary<PoolGroup, Vector2> _scrollPositions = new();
+        private readonly GroupDragReorder _groupReorder = new();
         private float _cachedViewWidth = 400f;
         private GUIStyle _headerStyle;
+        private GUIStyle _groupHeaderStyle;
+        private GUIStyle _groupHintStyle;
         private GUIStyle _deleteButtonStyle;
         private GUIStyle _hintLabelStyle;
 
@@ -40,6 +49,23 @@ namespace PoolSystem
         {
             fontSize = 20,
             fixedHeight = HeaderHeight
+        };
+
+        // A compact bold text field: reads as the group's title while staying clearly editable.
+        private GUIStyle GroupHeaderStyle => _groupHeaderStyle ??= new GUIStyle(EditorStyles.textField)
+        {
+            fontSize = 14,
+            fontStyle = FontStyle.Bold,
+            fixedHeight = GroupHeaderHeight,
+            alignment = TextAnchor.MiddleLeft
+        };
+
+        private GUIStyle GroupHintStyle => _groupHintStyle ??= new GUIStyle(EditorStyles.label)
+        {
+            fontStyle = FontStyle.Italic,
+            alignment = TextAnchor.MiddleLeft,
+            padding = new RectOffset(6, 0, 0, 0),
+            normal = { textColor = new Color(0.5f, 0.5f, 0.5f) }
         };
 
         private GUIStyle DeleteButtonStyle => _deleteButtonStyle ??= new GUIStyle(EditorStyles.miniButton)
@@ -73,14 +99,29 @@ namespace PoolSystem
 
             PoolGroup groupPendingRemoval = null;
 
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.LabelField("POOL SETTINGS", HeaderStyle, GUILayout.Height(HeaderHeight));
+            EditorGUILayout.HelpBox(GroupInfo, MessageType.Info);
+            EditorGUILayout.Space(6);
+
+            _groupReorder.Begin();
             for (var i = 0; i < poolData.Groups.Count; i++)
             {
                 var group = poolData.Groups[i];
-                DrawGroup(poolData, group, () => groupPendingRemoval = group);
+                DrawGroup(poolData, group, i, () => groupPendingRemoval = group);
+                _groupReorder.RecordGroupRect();
                 EditorGUILayout.Space(6);
             }
 
-            if (groupPendingRemoval != null)
+            if (_groupReorder.End(out var from, out var to))
+            {
+                Undo.RecordObject(poolData, "Reorder Pool Groups");
+                var moved = poolData.Groups[from];
+                poolData.Groups.RemoveAt(from);
+                poolData.Groups.Insert(to, moved);
+                EditorUtility.SetDirty(poolData);
+            }
+            else if (groupPendingRemoval != null)
             {
                 Undo.RecordObject(poolData, "Remove Pool Group");
                 poolData.Groups.Remove(groupPendingRemoval);
@@ -94,6 +135,8 @@ namespace PoolSystem
                 poolData.Groups.Add(new PoolGroup());
                 EditorUtility.SetDirty(poolData);
             }
+
+            EditorGUILayout.EndVertical();
 
             EditorGUILayout.Space(14);
 
@@ -111,26 +154,34 @@ namespace PoolSystem
             }
         }
 
-        private void DrawGroup(PoolData poolData, PoolGroup group, System.Action requestRemoveGroup)
+        private void DrawGroup(PoolData poolData, PoolGroup group, int index, System.Action requestRemoveGroup)
         {
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
 
             EditorGUILayout.BeginHorizontal();
+            _groupReorder.DrawHandle(index, GroupHeaderHeight);
+
+            var headerRect = EditorGUILayout.GetControlRect(GUILayout.Height(GroupHeaderHeight));
             EditorGUI.BeginChangeCheck();
-            var newHeader = EditorGUILayout.TextField(group.Header, HeaderStyle, GUILayout.Height(HeaderHeight));
+            var newHeader = EditorGUI.TextField(headerRect, group.Header, GroupHeaderStyle);
             if (EditorGUI.EndChangeCheck())
             {
                 Undo.RecordObject(poolData, "Rename Pool Group");
                 group.Header = newHeader;
             }
 
-            if (GUILayout.Button("✕", GUILayout.Width(HeaderHeight), GUILayout.Height(HeaderHeight)))
+            if (string.IsNullOrEmpty(group.Header))
+            {
+                EditorGUI.LabelField(headerRect, "Group name", GroupHintStyle);
+            }
+
+            if (GUILayout.Button("✕", GUILayout.Width(GroupHeaderHeight), GUILayout.Height(GroupHeaderHeight)))
             {
                 requestRemoveGroup();
             }
             EditorGUILayout.EndHorizontal();
 
-            EditorGUILayout.Space(10);
+            EditorGUILayout.Space(6);
 
             DrawEntryGrid(poolData, group);
 
@@ -153,7 +204,8 @@ namespace PoolSystem
                 _cachedViewWidth = EditorGUIUtility.currentViewWidth;
             }
 
-            var viewWidth = _cachedViewWidth - 40f;
+            // Inspector margins plus the POOL SETTINGS box and the group box around the grid.
+            var viewWidth = _cachedViewWidth - 56f;
             var perRow = Mathf.Max(1, Mathf.FloorToInt(viewWidth / CardWidth));
 
             var cardCount = group.Entries.Count + 1; // +1 for the "add entry" card
