@@ -43,6 +43,10 @@ namespace PoolSystem
         /// <summary>The transform pooled (inactive) instances are parented under.</summary>
         public Transform PoolContainer => _poolContainer;
 
+        /// <summary>Whether <paramref name="item"/> is one of this pool's instances and is out of it (got, not released).</summary>
+        public bool IsOut(GameObject item) =>
+            item != null && _entryLookup.TryGetValue(item, out var entry) && _corePool.IsActive(entry);
+
         /// <summary>
         /// Creates a new <see cref="GameObjectPool"/>.
         /// </summary>

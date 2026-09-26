@@ -32,6 +32,9 @@ namespace PoolSystem
         /// <inheritdoc />
         public int CountActive => _activeSet.Count;
 
+        /// <summary>Whether <paramref name="item"/> came from this pool and hasn't been released yet.</summary>
+        public bool IsActive(T item) => item != null && _activeSet.Contains(item);
+
         /// <inheritdoc />
         public int CountInactive => _inactive.Count;
 

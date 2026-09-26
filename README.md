@@ -83,6 +83,21 @@ public class Example : MonoBehaviour
 }
 ```
 
+**For code where the pool is optional** - falling back to `Instantiate`, or holding objects that may or may
+not come from a pool - there are versions that never throw nor log:
+
+```csharp
+if (!PoolManager.TryGet(prefab, out var instance))   // by the prefab's compiled Poolable type
+{
+    instance = Instantiate(prefab);
+}
+
+PoolManager.TryRelease(instance);                     // false if it isn't out of a pool
+```
+
+`PoolManager.TryGet(PoolTypes, out instance)` does the same by type, and `PoolManager.IsRegistered(type)`
+says whether a pool is registered for it.
+
 ## License
 
 [MIT License](LICENSE)

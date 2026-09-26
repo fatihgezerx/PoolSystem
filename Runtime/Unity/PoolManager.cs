@@ -102,6 +102,51 @@ namespace PoolSystem
         /// <summary>Retrieves an instance of <paramref name="type"/> from its pool.</summary>
         public static GameObject Get(PoolTypes type) => ResolvePool(type).Get();
 
+        /// <summary>Whether a pool is registered for <paramref name="type"/> (and <see cref="Initialize"/> was called).</summary>
+        public static bool IsRegistered(PoolTypes type) =>
+            _pools != null && type != PoolTypes.None && (uint)type < (uint)_pools.Length && _pools[(int)type] != null;
+
+        /// <summary>
+        /// An instance of <paramref name="type"/> when a pool is registered for it; false - and nothing logged -
+        /// otherwise, for code that falls back to <c>Instantiate</c> (e.g. an optional pool).
+        /// </summary>
+        public static bool TryGet(PoolTypes type, out GameObject instance)
+        {
+            instance = IsRegistered(type) ? _pools[(int)type].Get() : null;
+            return instance != null;
+        }
+
+        /// <summary>
+        /// An instance of the pool <paramref name="prefab"/> was compiled into (its <see cref="Poolable"/>'s type);
+        /// false when it has no Poolable or its pool isn't registered.
+        /// </summary>
+        public static bool TryGet(GameObject prefab, out GameObject instance)
+        {
+            instance = null;
+            return prefab != null && prefab.TryGetComponent<Poolable>(out var poolable) && TryGet(poolable.PoolType, out instance);
+        }
+
+        /// <summary>
+        /// Returns <paramref name="instance"/> to its pool if it is out of one (got, not yet released); false -
+        /// and nothing logged - otherwise, e.g. for an object placed in the scene rather than taken from a pool.
+        /// </summary>
+        public static bool TryRelease(GameObject instance)
+        {
+            if (instance == null || !instance.TryGetComponent<Poolable>(out var poolable) || !IsRegistered(poolable.PoolType))
+            {
+                return false;
+            }
+
+            var pool = _pools[(int)poolable.PoolType];
+            if (!pool.IsOut(instance))
+            {
+                return false;
+            }
+
+            pool.Release(instance);
+            return true;
+        }
+
         /// <summary>Returns <paramref name="instance"/> to the pool for <paramref name="type"/>.</summary>
         public static void Release(PoolTypes type, GameObject instance) => ResolvePool(type).Release(instance);
 
