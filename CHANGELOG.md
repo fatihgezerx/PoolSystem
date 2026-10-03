@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.3.0] - 2026-10-03
+
+### Added
+- `PoolManager.Shutdown()`: destroys every instance the pools created - waiting and handed out - and the `Pool [...]`
+  container objects, unhooks the scene-unload handler and leaves `IsInitialized` false. Safe to call when not initialized. `ClearAll()` now calls it.
+
+### Fixed
+- Calling `PoolManager.Initialize` a second time no longer leaves the previous pools - and their container objects - behind;
+  it shuts the old ones down first.
+- With Enter Play Mode Options skipping the domain reload, `PoolManager` no longer keeps the previous session's (destroyed)
+  pools or reports itself initialized when it is not.
+- The pool containers were never destroyed when the pools were cleared; they are now. Instances still handed out when the
+  pools are disposed were left behind; they are destroyed with their pool.
+
 ## [1.2.0] - 2026-10-03
 
 ### Added

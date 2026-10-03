@@ -9,6 +9,8 @@ namespace PoolSystem
     /// Static entry point for the enum-driven pooling workflow. Call <see cref="Initialize"/> once
     /// (e.g. from a bootstrap <c>MonoBehaviour</c>'s <c>Awake</c>) with a compiled <see cref="PoolData"/>,
     /// then use <see cref="Get(PoolTypes)"/>/<see cref="Release(PoolTypes,GameObject)"/> anywhere.
+    /// <see cref="Shutdown"/> (or a scene unload, by default) empties everything again; calling
+    /// <see cref="Initialize"/> a second time restarts cleanly.
     /// </summary>
     /// <remarks>
     /// Backed by a plain array indexed by <c>(int)PoolTypes</c> rather than a <c>Dictionary&lt;PoolTypes,_&gt;</c>.
@@ -39,6 +41,9 @@ namespace PoolSystem
         public static void Initialize(PoolData poolData)
         {
             if (poolData == null) throw new ArgumentNullException(nameof(poolData));
+
+            // Starting again replaces the previous pools instead of leaving them (and their containers) behind.
+            Shutdown();
 
             var typeCount = Enum.GetValues(typeof(PoolTypes)).Length;
             _pools = new GameObjectPool[typeCount];
@@ -95,7 +100,7 @@ namespace PoolSystem
         {
             if (AutoClearOnSceneUnload)
             {
-                ClearAll();
+                Shutdown();
             }
         }
 
@@ -201,9 +206,19 @@ namespace PoolSystem
             return pool;
         }
 
-        /// <summary>Clears and discards every currently registered pool.</summary>
-        public static void ClearAll()
+        /// <summary>
+        /// Stops the pools: destroys every instance they created - those waiting and those still handed out - and the
+        /// <c>Pool [...]</c> container objects, and unhooks the scene-unload handler. Safe to call when not
+        /// initialized. <see cref="IsInitialized"/> is false afterwards; call <see cref="Initialize"/> to start again.
+        /// </summary>
+        public static void Shutdown()
         {
+            if (_sceneUnloadHookInstalled)
+            {
+                SceneManager.sceneUnloaded -= OnSceneUnloaded;
+                _sceneUnloadHookInstalled = false;
+            }
+
             if (_pools == null)
             {
                 return;
@@ -211,10 +226,36 @@ namespace PoolSystem
 
             foreach (var pool in _pools)
             {
-                pool?.Dispose();
+                if (pool == null)
+                {
+                    continue;
+                }
+
+                var container = pool.PoolContainer;
+                pool.Dispose();
+                if (container != null)
+                {
+                    UnityEngine.Object.Destroy(container.gameObject);
+                }
             }
 
             _pools = null;
+        }
+
+        /// <summary>Same as <see cref="Shutdown"/>; kept for existing callers.</summary>
+        public static void ClearAll() => Shutdown();
+
+        // Keeps the static state clean when "Enter Play Mode Options" skips the domain reload: the previous session's
+        // pools and their objects are gone by then, and the scene-unload handler would otherwise be hooked twice.
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            _pools = null;
+            if (_sceneUnloadHookInstalled)
+            {
+                SceneManager.sceneUnloaded -= OnSceneUnloaded;
+                _sceneUnloadHookInstalled = false;
+            }
         }
 
         /// <summary>Every currently registered (type, pool) pair. For diagnostics/tooling use.</summary>

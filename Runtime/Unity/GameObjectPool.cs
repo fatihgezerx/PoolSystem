@@ -187,12 +187,29 @@ namespace PoolSystem
         /// <inheritdoc />
         public void Clear() => _corePool.Clear();
 
-        /// <summary>Clears the pool and unsubscribes from its internal events.</summary>
+        /// <summary>
+        /// Unsubscribes from the pool's internal events and destroys every instance it created - those waiting in the
+        /// pool and those still handed out (<see cref="Clear"/> alone only destroys the waiting ones).
+        /// </summary>
         public void Dispose()
         {
             _corePool.InvalidReleaseDetected -= OnInvalidRelease;
             _corePool.PoolExpanded -= OnPoolExpanded;
             Clear();
+
+            // What is still handed out belongs to the pool too: it goes with it.
+            if (_entryLookup.Count > 0)
+            {
+                foreach (var instance in new List<GameObject>(_entryLookup.Keys))
+                {
+                    if (instance != null)
+                    {
+                        UnityEngine.Object.Destroy(instance);
+                    }
+                }
+
+                _entryLookup.Clear();
+            }
         }
     }
 }

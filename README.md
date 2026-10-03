@@ -30,7 +30,8 @@ with another base class.
 - `PoolManager`: a minimal static API (`Initialize`, `Get`, `Release`) backed by a plain array indexed
   by `(int)PoolTypes` - no dictionary hashing, no boxing
 - Double-release and foreign-object guards that log a warning instead of corrupting pool state
-- Automatic pool cleanup on scene unload
+- Automatic pool cleanup on scene unload, and `PoolManager.Shutdown()` to stop the pools yourself (it destroys every
+  instance the pools created, handed out ones included, and their `Pool [...]` containers); calling `Initialize` again restarts cleanly
 
 ## Setup
 
