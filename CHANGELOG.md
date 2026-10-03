@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.0] - 2026-10-03
+
+### Added
+- `PoolManager.Get(type, position, rotation, parent = null)` and `PoolManager.Get(type, position, eulerAngles,
+  parent = null)`: take an instance and place it at a world position and rotation (rotation as a `Quaternion`
+  or as Euler angles in a `Vector3`); it stays under the pool's container unless a parent is given. `GameObjectPool.Get(position, rotation,
+  parent = null)` does the same for a single pool.
+
+### Changed
+- `GameObjectPool` activates an instance itself in `Get` instead of through the core pool's `onGet` callback,
+  so a placed instance is positioned before `OnEnable` / `OnSpawned` run. Plain `Get()` behaves as before.
+
 ## [1.1.0] - 2026-09-24
 
 ### Added

@@ -102,6 +102,22 @@ namespace PoolSystem
         /// <summary>Retrieves an instance of <paramref name="type"/> from its pool.</summary>
         public static GameObject Get(PoolTypes type) => ResolvePool(type).Get();
 
+        /// <summary>
+        /// Retrieves an instance of <paramref name="type"/> placed at world <paramref name="position"/> with world
+        /// <paramref name="rotation"/>. It stays under the pool's container like a plain <see cref="Get(PoolTypes)"/>,
+        /// unless <paramref name="parent"/> is given. It is placed before it is activated, so <c>OnEnable</c> and
+        /// <see cref="IPoolable.OnSpawned"/> already see the pose.
+        /// </summary>
+        public static GameObject Get(PoolTypes type, Vector3 position, Quaternion rotation, Transform parent = null) =>
+            ResolvePool(type).Get(position, rotation, parent);
+
+        /// <summary>
+        /// Same as <see cref="Get(PoolTypes,Vector3,Quaternion,Transform)"/>, with the rotation given as Euler
+        /// angles in degrees (a plain <see cref="Vector3"/>, as shown in the Inspector).
+        /// </summary>
+        public static GameObject Get(PoolTypes type, Vector3 position, Vector3 eulerAngles, Transform parent = null) =>
+            ResolvePool(type).Get(position, Quaternion.Euler(eulerAngles), parent);
+
         /// <summary>Whether a pool is registered for <paramref name="type"/> (and <see cref="Initialize"/> was called).</summary>
         public static bool IsRegistered(PoolTypes type) =>
             _pools != null && type != PoolTypes.None && (uint)type < (uint)_pools.Length && _pools[(int)type] != null;

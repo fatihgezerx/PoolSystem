@@ -83,7 +83,6 @@ namespace PoolSystem
                 prewarmCount,
                 maxSize,
                 expansionMode,
-                onGet: OnEntryGet,
                 onRelease: OnEntryRelease);
 
             _corePool.InvalidReleaseDetected += OnInvalidRelease;
@@ -112,7 +111,9 @@ namespace PoolSystem
             }
         }
 
-        private static void OnEntryGet(Entry entry)
+        // Activation is done by Get() itself, not by the core pool's onGet callback, so a Get that places the
+        // instance can do it before the object turns on: OnEnable / OnSpawned already see the final transform.
+        private static void Activate(Entry entry)
         {
             entry.GameObject.SetActive(true);
             entry.Poolable?.OnSpawned();
@@ -144,6 +145,27 @@ namespace PoolSystem
         public GameObject Get()
         {
             var entry = _corePool.Get();
+            Activate(entry);
+            return entry.GameObject;
+        }
+
+        /// <summary>
+        /// Like <see cref="Get()"/>, but places the instance first: moved to the world <paramref name="position"/>
+        /// and <paramref name="rotation"/> before it is activated, so <c>OnEnable</c> and
+        /// <see cref="IPoolable.OnSpawned"/> already see them. It stays under the pool's container, exactly as
+        /// with <see cref="Get()"/>, unless <paramref name="parent"/> is given.
+        /// </summary>
+        public GameObject Get(Vector3 position, Quaternion rotation, Transform parent = null)
+        {
+            var entry = _corePool.Get();
+            var spawned = entry.GameObject.transform;
+            if (parent != null)
+            {
+                spawned.SetParent(parent, false);
+            }
+
+            spawned.SetPositionAndRotation(position, rotation);
+            Activate(entry);
             return entry.GameObject;
         }
 

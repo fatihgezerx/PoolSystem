@@ -76,12 +76,23 @@ public class Example : MonoBehaviour
     private void Start()
     {
         var instance = PoolManager.Get(PoolTypes.Enemy);
-        instance.transform.position = transform.position;
 
         PoolManager.Release(PoolTypes.Enemy, instance);
     }
 }
 ```
+
+**Spawning at a position and rotation.** `Get` can place the instance for you, with the rotation either as
+Euler angles (a plain `Vector3`, as shown in the Inspector) or as a `Quaternion`, and an optional parent.
+Without a parent the instance stays under the pool's container, exactly like a plain `Get`:
+
+```csharp
+var enemy = PoolManager.Get(PoolTypes.Enemy, spawnPoint.position, new Vector3(0f, 90f, 0f));
+var bullet = PoolManager.Get(PoolTypes.Bullet, muzzle.position, muzzle.rotation, parent: container);
+```
+
+The instance is placed before it is activated, so `OnEnable` and `IPoolable.OnSpawned` already see the
+final position and rotation (setting `transform.position` after `Get` would run them one frame too early).
 
 **For code where the pool is optional** - falling back to `Instantiate`, or holding objects that may or may
 not come from a pool - there are versions that never throw nor log:
